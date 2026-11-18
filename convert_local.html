@@ -1,0 +1,2497 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>convert.local — Local File Converter</title>
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- JSZip (ZIP archives & valid DOCX package generation) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- PDF.js (Reading PDF text) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+
+    <!-- jsPDF (PDF export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Mammoth.js (Reading DOCX) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <!-- SheetJS / XLSX (Spreadsheets & CSV/TSV) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- js-yaml (YAML <-> JSON) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
+    <!-- Marked (Markdown -> HTML) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- lamejs (Client-side MP3 encoding) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        /* =========================================================
+           SOFT SKY-BLUE GLASSMORPHISM VARIABLES (LIGHT & DARK)
+           ========================================================= */
+        :root,
+        html[data-theme="light"] {
+            --bg-base: #eef6fc;
+            --text-primary: #0b192c;
+            --text-secondary: #2c4a6e;
+            --text-muted: #527399;
+
+            /* Translucent Frosted Glass Surfaces */
+            --glass-bg: rgba(255, 255, 255, 0.62);
+            --glass-bg-elevated: rgba(255, 255, 255, 0.84);
+            --glass-input-bg: rgba(255, 255, 255, 0.76);
+            --glass-hover: rgba(255, 255, 255, 0.94);
+
+            /* Crisp Visible Outlines & Specular Inner Highlights */
+            --border-subtle: rgba(255, 255, 255, 0.9);
+            --border-outer: rgba(2, 132, 199, 0.28);
+            --border-control: rgba(14, 116, 179, 0.32);
+            --glass-highlight: inset 0 1px 1px rgba(255, 255, 255, 0.95);
+            --control-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            --glass-shadow: 0 8px 32px -6px rgba(14, 116, 179, 0.11), 0 2px 8px -2px rgba(14, 116, 179, 0.06);
+            --glass-shadow-elevated: 0 20px 48px -10px rgba(14, 116, 179, 0.18), 0 4px 16px -4px rgba(14, 116, 179, 0.08);
+
+            --accent-emerald: #0284c7;
+            --accent-emerald-soft: rgba(14, 165, 233, 0.14);
+            --accent-emerald-text: #0369a1;
+
+            --btn-primary-bg: #0284c7;
+            --btn-primary-hover: #0369a1;
+            --btn-primary-text: #ffffff;
+
+            /* Soft Ambient Sky-Blue Orbs */
+            --orb-1: rgba(56, 189, 248, 0.36);
+            --orb-2: rgba(14, 165, 233, 0.28);
+            --orb-3: rgba(125, 211, 252, 0.42);
+            --orb-4: rgba(34, 211, 238, 0.24);
+
+            --scrollbar-track: #e6f3fc;
+            --scrollbar-thumb: #9fd0f5;
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232c4a6e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        }
+
+        html[data-theme="dark"] {
+            --bg-base: #070708;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+
+            /* Dark Monochrome Frosted Glass Surfaces */
+            --glass-bg: rgba(20, 20, 23, 0.68);
+            --glass-bg-elevated: rgba(26, 26, 30, 0.88);
+            --glass-input-bg: rgba(30, 30, 34, 0.72);
+            --glass-hover: rgba(42, 42, 48, 0.88);
+
+            /* Monochrome Specular Edges & Shadows */
+            --border-subtle: rgba(255, 255, 255, 0.14);
+            --border-outer: rgba(161, 161, 170, 0.22);
+            --border-control: rgba(161, 161, 170, 0.28);
+            --glass-highlight: inset 0 1px 1px rgba(255, 255, 255, 0.09);
+            --control-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            --glass-shadow: 0 10px 36px -6px rgba(0, 0, 0, 0.65);
+            --glass-shadow-elevated: 0 24px 54px -8px rgba(0, 0, 0, 0.85);
+
+            --accent-emerald: #e4e4e7;
+            --accent-emerald-soft: rgba(228, 228, 231, 0.12);
+            --accent-emerald-text: #f4f4f5;
+
+            --btn-primary-bg: #e4e4e7;
+            --btn-primary-hover: #ffffff;
+            --btn-primary-text: #09090b;
+
+            /* Dark Ambient Charcoal & Ash Orbs */
+            --orb-1: rgba(113, 113, 122, 0.18);
+            --orb-2: rgba(82, 82, 91, 0.2);
+            --orb-3: rgba(161, 161, 170, 0.14);
+            --orb-4: rgba(63, 63, 70, 0.22);
+
+            --scrollbar-track: #09090b;
+            --scrollbar-thumb: #27272a;
+            --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        }
+
+        /* =========================================================
+           BASE LAYOUT & AMBIENT SKY-BLUE BLURRED BACKGROUND
+           ========================================================= */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        button:focus-visible,
+        select:focus-visible,
+        input:focus-visible,
+        a:focus-visible {
+            outline: 2px solid var(--accent-emerald);
+            outline-offset: 2px;
+        }
+
+        #ambient-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .ambient-orb {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(85px);
+            -webkit-filter: blur(85px);
+            will-change: transform;
+            animation: floatOrb 22s ease-in-out infinite alternate;
+        }
+
+        .orb-1 {
+            width: 540px;
+            height: 540px;
+            top: -120px;
+            left: -80px;
+            background: var(--orb-1);
+        }
+
+        .orb-2 {
+            width: 600px;
+            height: 600px;
+            top: 12%;
+            right: -140px;
+            background: var(--orb-2);
+            animation-delay: -6s;
+        }
+
+        .orb-3 {
+            width: 520px;
+            height: 520px;
+            bottom: -140px;
+            left: 18%;
+            background: var(--orb-3);
+            animation-delay: -12s;
+        }
+
+        .orb-4 {
+            width: 440px;
+            height: 440px;
+            bottom: 8%;
+            right: 12%;
+            background: var(--orb-4);
+            animation-delay: -17s;
+        }
+
+        @keyframes floatOrb {
+            0% {
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+            50% {
+                transform: translate3d(28px, -22px, 0) scale(1.06);
+            }
+            100% {
+                transform: translate3d(-22px, 24px, 0) scale(0.96);
+            }
+        }
+
+        .noise-overlay {
+            position: absolute;
+            inset: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* =========================================================
+           LIQUID GLASS SURFACES & CONTROLS
+           ========================================================= */
+        .liquid-glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(22px) saturate(185%);
+            -webkit-backdrop-filter: blur(22px) saturate(185%);
+            border: 1px solid var(--border-outer);
+            box-shadow: var(--glass-highlight), var(--glass-shadow);
+            transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .liquid-glass-elevated {
+            background: var(--glass-bg-elevated);
+            backdrop-filter: blur(28px) saturate(195%);
+            -webkit-backdrop-filter: blur(28px) saturate(195%);
+            border: 1px solid var(--border-outer);
+            box-shadow: var(--glass-highlight), var(--glass-shadow-elevated);
+        }
+
+        .glass-input {
+            background: var(--glass-input-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-control);
+            box-shadow: var(--control-highlight), 0 1px 3px rgba(14, 116, 179, 0.08);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .glass-input:hover,
+        .glass-input:focus {
+            border-color: var(--accent-emerald);
+        }
+
+        select.glass-input {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: var(--select-arrow);
+            background-repeat: no-repeat;
+            background-position: right 0.65rem center;
+            background-size: 14px 14px;
+            padding-right: 2rem;
+        }
+
+        .btn-emerald {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+            border: 1px solid rgba(2, 132, 199, 0.35);
+            box-shadow: 0 4px 14px -2px rgba(2, 132, 199, 0.35);
+            transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-emerald:hover {
+            background: var(--btn-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px -2px rgba(2, 132, 199, 0.42);
+        }
+
+        .btn-emerald:active {
+            transform: translateY(0);
+        }
+
+        html[data-theme="dark"] .btn-emerald {
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.55);
+        }
+
+        html[data-theme="dark"] .btn-emerald:hover {
+            box-shadow: 0 6px 20px -2px rgba(255, 255, 255, 0.16);
+        }
+
+        .btn-secondary {
+            background: var(--glass-input-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-control);
+            box-shadow: var(--control-highlight), 0 1px 3px rgba(14, 116, 179, 0.07);
+            color: var(--text-primary);
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--glass-hover);
+            border-color: var(--accent-emerald);
+        }
+
+        .dropzone-glass {
+            border: 1.5px dashed rgba(2, 132, 199, 0.42) !important;
+        }
+
+        html[data-theme="dark"] .dropzone-glass {
+            border: 1.5px dashed rgba(161, 161, 170, 0.34) !important;
+        }
+
+        .drop-active {
+            border-color: var(--accent-emerald) !important;
+            background: var(--glass-hover) !important;
+            box-shadow: 0 0 0 4px var(--accent-emerald-soft), var(--glass-shadow-elevated) !important;
+        }
+
+        /* 3D Hover Tilt & Luminous Glare for Dropzone */
+        .dropzone-3d-stage {
+            perspective: 1100px;
+            -webkit-perspective: 1100px;
+        }
+
+        .dropzone-3d {
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
+            will-change: transform, box-shadow;
+            transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.25s ease, background-color 0.25s ease;
+        }
+
+        .dropzone-3d.is-tilting {
+            transition: transform 0.08s ease-out, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+            box-shadow: var(--glass-highlight), 0 22px 48px -12px rgba(2, 132, 199, 0.24);
+        }
+
+        html[data-theme="dark"] .dropzone-3d.is-tilting {
+            box-shadow: var(--glass-highlight), 0 22px 48px -12px rgba(0, 0, 0, 0.75);
+        }
+
+        .dropzone-glare {
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background: radial-gradient(
+                480px circle at var(--glare-x, 50%) var(--glare-y, 50%),
+                rgba(255, 255, 255, 0.55) 0%,
+                rgba(14, 165, 233, 0.1) 42%,
+                transparent 72%
+            );
+            z-index: 1;
+        }
+
+        html[data-theme="dark"] .dropzone-glare {
+            background: radial-gradient(
+                480px circle at var(--glare-x, 50%) var(--glare-y, 50%),
+                rgba(255, 255, 255, 0.11) 0%,
+                rgba(161, 161, 170, 0.05) 42%,
+                transparent 72%
+            );
+        }
+
+        .dropzone-3d.is-tilting .dropzone-glare {
+            opacity: 1;
+        }
+
+        .dropzone-layer-icon {
+            transform: translateZ(34px);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .dropzone-3d.is-tilting .dropzone-layer-icon {
+            transform: translateZ(44px) scale(1.05);
+        }
+
+        .dropzone-layer-title {
+            transform: translateZ(22px);
+        }
+
+        .dropzone-layer-text {
+            transform: translateZ(14px);
+        }
+
+        .dropzone-layer-btn {
+            transform: translateZ(38px);
+        }
+
+        /* Custom Range Input */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(2, 132, 199, 0.24);
+            outline: none;
+        }
+
+        html[data-theme="dark"] input[type="range"] {
+            background: rgba(161, 161, 170, 0.28);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+        }
+
+        html[data-theme="dark"] input[type="range"]::-webkit-slider-thumb,
+        html[data-theme="dark"] input[type="range"]::-moz-range-thumb {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500/20">
+
+    <!-- AMBIENT SKY-BLUE BLURRED BACKGROUND -->
+    <div id="ambient-bg" aria-hidden="true">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="ambient-orb orb-4"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- STICKY GLASS HEADER -->
+    <header class="sticky top-0 z-40 liquid-glass !border-x-0 !border-t-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+            <a href="#" class="font-mono text-base sm:text-lg font-semibold tracking-tight text-[var(--text-primary)] hover:text-[var(--accent-emerald)] transition-colors">
+                convert.local
+            </a>
+
+            <div class="flex items-center gap-2.5">
+                <!-- Language Switcher (RU | EN) -->
+                <div class="p-1 rounded-full glass-input flex items-center gap-0.5" role="group" aria-label="Language">
+                    <button type="button" id="langRuBtn" class="px-2.5 py-1 rounded-full font-mono text-[11px] font-semibold transition-all">RU</button>
+                    <button type="button" id="langEnBtn" class="px-2.5 py-1 rounded-full font-mono text-[11px] font-semibold transition-all">EN</button>
+                </div>
+
+                <!-- Theme Switcher (LIGHT / DARK) -->
+                <div class="p-1 rounded-full glass-input flex items-center gap-0.5" role="group" aria-label="Theme">
+                    <button type="button" id="themeLightBtn" class="px-3 py-1 rounded-full font-mono text-[11px] font-medium transition-all flex items-center gap-1.5">
+                        <i data-lucide="sun" class="w-3 h-3"></i>
+                        <span data-i18n="themeLight">СВЕТЛАЯ</span>
+                    </button>
+                    <button type="button" id="themeDarkBtn" class="px-3 py-1 rounded-full font-mono text-[11px] font-medium transition-all flex items-center gap-1.5">
+                        <i data-lucide="moon" class="w-3 h-3"></i>
+                        <span data-i18n="themeDark">ТЁМНАЯ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-7">
+
+        <!-- HERO SECTION (SINGLE-LINE TITLE) -->
+        <section class="space-y-3">
+            <h1 data-i18n="heroTitle" class="text-[clamp(1.1rem,2.7vw,2.25rem)] font-semibold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                Локальный конвертер файлов студийного класса
+            </h1>
+            <p data-i18n="heroSubtitle" class="text-sm sm:text-base text-[var(--text-secondary)] max-w-3xl leading-relaxed">
+                Мгновенная конвертация документов, таблиц, изображений и аудио прямо в памяти вашего браузера. Файлы никогда не загружаются на сервер — полная приватность и контроль параметров экспорта.
+            </p>
+        </section>
+
+        <!-- CATEGORY FILTER TABS & SUPPORTED FORMATS TRIGGER (EQUAL HEIGHT) -->
+        <section class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div id="categoryTabs" class="flex flex-wrap items-center gap-1.5 p-1.5 min-h-[42px] rounded-2xl liquid-glass w-fit">
+                <button type="button" data-cat="all" class="cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-semibold flex items-center justify-center transition-all">ВСЕ</button>
+                <button type="button" data-cat="document" class="cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-medium flex items-center justify-center transition-all">ДОКУМЕНТЫ</button>
+                <button type="button" data-cat="table" class="cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-medium flex items-center justify-center transition-all">ТАБЛИЦЫ И ДАННЫЕ</button>
+                <button type="button" data-cat="image" class="cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-medium flex items-center justify-center transition-all">ИЗОБРАЖЕНИЯ</button>
+                <button type="button" data-cat="audio" class="cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-medium flex items-center justify-center transition-all">АУДИО</button>
+            </div>
+
+            <button type="button" id="openFormatsModalBtn" class="h-[42px] px-4 rounded-2xl liquid-glass hover:!border-[var(--accent-emerald)] text-xs font-mono font-medium text-[var(--accent-emerald-text)] inline-flex items-center justify-center gap-2 w-fit transition-all">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span data-i18n="supportedFormatsBtn">Поддерживаемые форматы</span>
+            </button>
+        </section>
+
+        <!-- GLASS DROPZONE WITH 3D HOVER EFFECT -->
+        <section class="dropzone-3d-stage">
+            <div id="dropzone" class="dropzone-3d dropzone-glass relative overflow-hidden group cursor-pointer rounded-2xl liquid-glass hover:!border-[var(--accent-emerald)] p-8 sm:p-12 flex flex-col items-center justify-center text-center">
+                <div class="dropzone-glare" aria-hidden="true"></div>
+                <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.docx,.doc,.rtf,.md,.markdown,.html,.htm,.txt,.xlsx,.xls,.csv,.tsv,.json,.yaml,.yml,.xml,image/*,audio/*,.ico,.svg,.bmp,.gif,.webp,.flac,.m4a,.ogg,.wav,.mp3,.aac">
+
+                <div class="dropzone-layer-icon relative z-10 w-12 h-12 rounded-2xl glass-input flex items-center justify-center mb-4">
+                    <i data-lucide="upload-cloud" class="w-6 h-6 text-[var(--accent-emerald)]"></i>
+                </div>
+
+                <h2 data-i18n="dropTitle" class="dropzone-layer-title relative z-10 text-base sm:text-lg font-medium mb-1.5">
+                    Перетащите файлы сюда или выберите на устройстве
+                </h2>
+
+                <p data-i18n="dropSummary" class="dropzone-layer-text relative z-10 text-xs sm:text-sm text-[var(--text-muted)] max-w-2xl mb-6 leading-relaxed">
+                    Документы (PDF, DOCX, RTF, MD, HTML, TXT) · Таблицы и данные (XLSX, XLS, CSV, TSV, JSON, YAML, XML) · Изображения (PNG, JPG, WEBP, GIF, BMP, SVG, ICO) · Аудио (MP3, WAV, OGG, FLAC, M4A, AAC)
+                </p>
+
+                <button type="button" id="selectFilesBtn" class="dropzone-layer-btn relative z-10 px-5 py-2.5 rounded-xl btn-emerald font-medium text-xs sm:text-sm flex items-center gap-2">
+                    <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                    <span data-i18n="selectFilesBtn">Выбрать файлы</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2-COLUMN STUDIO WORKSPACE (8 cols File Queue + 4 cols Conversion Settings) -->
+        <section id="workspaceSection" class="hidden space-y-5">
+            <!-- Batch Actions Bar -->
+            <div class="rounded-2xl liquid-glass p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="font-mono text-xs text-[var(--text-muted)] flex items-center gap-2">
+                        <span><span data-i18n="filesCountLabel">ФАЙЛОВ:</span> <strong id="queueCount" class="text-[var(--text-primary)]">0</strong></span>
+                        <span>•</span>
+                        <strong id="totalSize" class="text-[var(--text-primary)]">0 Б</strong>
+                    </div>
+
+                    <div class="h-4 w-[1px] bg-[var(--border-outer)] hidden sm:block"></div>
+
+                    <div class="flex items-center gap-2">
+                        <label for="globalTargetSelect" data-i18n="globalTargetLabel" class="font-mono text-xs text-[var(--text-muted)] uppercase">Конвертировать все в:</label>
+                        <select id="globalTargetSelect" class="glass-input rounded-xl px-3 py-1.5 font-mono text-xs font-semibold text-[var(--accent-emerald-text)] cursor-pointer min-w-[165px]">
+                            <option value="">—</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" id="convertAllBtn" class="px-4 py-2 rounded-xl btn-emerald font-medium text-xs flex items-center gap-2">
+                        <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                        <span data-i18n="convertAllBtn">Конвертировать всё</span>
+                    </button>
+
+                    <button type="button" id="downloadZipBtn" disabled class="px-4 py-2 rounded-xl btn-secondary disabled:opacity-40 disabled:pointer-events-none font-medium text-xs flex items-center gap-2">
+                        <i data-lucide="archive" class="w-3.5 h-3.5 text-[var(--accent-emerald)]"></i>
+                        <span data-i18n="downloadZipBtn">Скачать ZIP</span>
+                    </button>
+
+                    <button type="button" id="clearAllBtn" class="px-3.5 py-2 rounded-xl btn-secondary text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs flex items-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="clearAllBtn">Очистить</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 12-Column Grid: 8 Cols File Queue + 4 Cols Settings Sidebar -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Left 8 Columns: File Queue -->
+                <div class="lg:col-span-8 space-y-3" id="fileList"></div>
+
+                <!-- Right 4 Columns: Context-Aware Conversion Settings Sidebar -->
+                <aside class="lg:col-span-4 rounded-2xl liquid-glass p-5 space-y-4 lg:sticky lg:top-24">
+                    <div class="flex items-center justify-between border-b border-[var(--border-outer)] pb-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-[var(--accent-emerald)]"></i>
+                            <h3 data-i18n="settingsHeading" class="font-mono text-xs font-semibold uppercase tracking-wider">Параметры конвертации</h3>
+                        </div>
+                    </div>
+
+                    <!-- Empty State Hint -->
+                    <div id="settingsEmptyHint" class="hidden py-4 text-center">
+                        <p data-i18n="settingsEmptyHint" class="text-xs text-[var(--text-muted)] leading-relaxed">
+                            Добавьте файлы в очередь — здесь появятся подходящие параметры
+                        </p>
+                    </div>
+
+                    <!-- Documents & Text Settings Group -->
+                    <div id="settingsGroupDocs" data-settings-group class="hidden space-y-3.5">
+                        <div class="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="settingsDocsTitle">Документы и текст</span>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="settingPdfPageSize" data-i18n="pdfPageSizeLabel" class="block text-xs text-[var(--text-secondary)]">Размер страницы PDF</label>
+                            <select id="settingPdfPageSize" class="w-full glass-input rounded-xl px-3 py-1.5 font-mono text-xs">
+                                <option value="a4" selected>A4 (210 × 297 мм)</option>
+                                <option value="letter">Letter (8.5 × 11 in)</option>
+                                <option value="a5">A5 (148 × 210 мм)</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="space-y-1">
+                                <label for="settingDocFontSize" data-i18n="docFontSizeLabel" class="block text-[11px] text-[var(--text-secondary)]">Размер шрифта</label>
+                                <select id="settingDocFontSize" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="10">10 pt</option>
+                                    <option value="11" selected>11 pt</option>
+                                    <option value="12">12 pt</option>
+                                    <option value="14">14 pt</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="settingDocLineSpacing" data-i18n="docLineSpacingLabel" class="block text-[11px] text-[var(--text-secondary)]">Интервал</label>
+                                <select id="settingDocLineSpacing" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="1.2">1.2×</option>
+                                    <option value="1.5" selected>1.5×</option>
+                                    <option value="1.8">1.8×</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tables & Data Settings Group -->
+                    <div id="settingsGroupTables" data-settings-group class="hidden space-y-3.5">
+                        <div class="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="settingsTablesTitle">Таблицы и данные</span>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="settingCsvDelimiter" data-i18n="csvDelimiterLabel" class="block text-xs text-[var(--text-secondary)]">Разделитель CSV</label>
+                            <select id="settingCsvDelimiter" class="w-full glass-input rounded-xl px-3 py-1.5 font-mono text-xs">
+                                <option value=";" data-i18n="csvSemicolon">; (Точка с запятой)</option>
+                                <option value="," selected data-i18n="csvComma">, (Запятая)</option>
+                                <option value="&#9;" data-i18n="csvTab">Tab (Табуляция)</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="settingJsonFormat" data-i18n="jsonFormatLabel" class="block text-xs text-[var(--text-secondary)]">Формат JSON</label>
+                            <select id="settingJsonFormat" class="w-full glass-input rounded-xl px-3 py-1.5 font-mono text-xs">
+                                <option value="pretty" selected data-i18n="jsonPretty">Форматированный (2 пробела)</option>
+                                <option value="minified" data-i18n="jsonMinified">Сжатый (Minified)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Image Settings Group -->
+                    <div id="settingsGroupImages" data-settings-group class="hidden space-y-3.5">
+                        <div class="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="settingsImagesTitle">Изображения</span>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between text-xs">
+                                <label for="settingImgQuality" data-i18n="imgQualityLabel" class="text-[var(--text-secondary)]">Качество сжатия</label>
+                                <span id="settingImgQualityVal" class="font-mono font-semibold">88%</span>
+                            </div>
+                            <input type="range" id="settingImgQuality" min="0.1" max="1" step="0.02" value="0.88" class="w-full">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="space-y-1">
+                                <label for="settingImgScale" data-i18n="imgScaleLabel" class="block text-[11px] text-[var(--text-secondary)]">Масштаб</label>
+                                <select id="settingImgScale" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="0.25">25%</option>
+                                    <option value="0.5">50%</option>
+                                    <option value="0.75">75%</option>
+                                    <option value="1" selected>100%</option>
+                                    <option value="1.25">125%</option>
+                                    <option value="1.5">150%</option>
+                                    <option value="2">200%</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="settingImgMaxWidth" data-i18n="imgMaxWidthLabel" class="block text-[11px] text-[var(--text-secondary)]">Макс. ширина</label>
+                                <select id="settingImgMaxWidth" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="0" selected data-i18n="imgMaxOriginal">Оригинал</option>
+                                    <option value="3840">3840 px</option>
+                                    <option value="1920">1920 px</option>
+                                    <option value="1280">1280 px</option>
+                                    <option value="800">800 px</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Settings Group -->
+                    <div id="settingsGroupAudio" data-settings-group class="hidden space-y-3.5">
+                        <div class="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="audio-waveform" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="settingsAudioTitle">Аудио</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="space-y-1">
+                                <label for="settingAudioRate" data-i18n="audioRateLabel" class="block text-[11px] text-[var(--text-secondary)]">Частота</label>
+                                <select id="settingAudioRate" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="44100" selected>44.1 kHz</option>
+                                    <option value="48000">48 kHz</option>
+                                    <option value="22050">22.05 kHz</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="settingAudioBitrate" data-i18n="audioBitrateLabel" class="block text-[11px] text-[var(--text-secondary)]">Битрейт MP3</label>
+                                <select id="settingAudioBitrate" class="w-full glass-input rounded-xl px-2.5 py-1.5 font-mono text-xs">
+                                    <option value="128">128 kbps</option>
+                                    <option value="192" selected>192 kbps</option>
+                                    <option value="256">256 kbps</option>
+                                    <option value="320">320 kbps</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label for="settingAudioChannels" data-i18n="audioChannelsLabel" class="block text-[11px] text-[var(--text-secondary)]">Каналы</label>
+                            <select id="settingAudioChannels" class="w-full glass-input rounded-xl px-3 py-1.5 font-mono text-xs">
+                                <option value="2" selected data-i18n="audioStereo">Стерео (Stereo)</option>
+                                <option value="1" data-i18n="audioMono">Моно (Mono)</option>
+                            </select>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- GLASS FOOTER -->
+    <footer class="liquid-glass !border-x-0 !border-b-0 py-5 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-center text-center text-xs text-[var(--text-muted)]">
+            <span data-i18n="footerNote">Все операции выполняются локально в вашем браузере без отправки файлов в сеть.</span>
+        </div>
+    </footer>
+
+    <!-- SUPPORTED FORMATS MODAL -->
+    <div id="formatsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+        <div class="w-full max-w-3xl rounded-2xl liquid-glass-elevated overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-5 py-4 border-b border-[var(--border-outer)] flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="grid" class="w-4 h-4 text-[var(--accent-emerald)]"></i>
+                    <h3 data-i18n="formatsModalTitle" class="font-mono text-xs sm:text-sm font-semibold uppercase tracking-wider">Поддерживаемые форматы и направления</h3>
+                </div>
+                <button type="button" id="closeFormatsModalBtn" class="p-1.5 rounded-xl btn-secondary text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Documents Card -->
+                    <div class="p-4 rounded-xl glass-input space-y-2">
+                        <div class="flex items-center gap-2 font-mono text-xs font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span data-i18n="catDocuments">Документы</span>
+                        </div>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="inputLabel">Вход:</strong> PDF, DOCX, RTF, MD, HTML, TXT
+                        </p>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="outputLabel">Выход:</strong> PDF, DOCX, TXT, HTML, MD, RTF
+                        </p>
+                    </div>
+
+                    <!-- Spreadsheets & Data Card -->
+                    <div class="p-4 rounded-xl glass-input space-y-2">
+                        <div class="flex items-center gap-2 font-mono text-xs font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="table-2" class="w-4 h-4"></i>
+                            <span data-i18n="catSpreadsheets">Таблицы и данные</span>
+                        </div>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="inputLabel">Вход:</strong> XLSX, XLS, CSV, TSV, JSON, YAML, XML
+                        </p>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="outputLabel">Выход:</strong> XLSX, CSV, TSV, JSON, YAML, XML, HTML, PDF
+                        </p>
+                    </div>
+
+                    <!-- Images Card -->
+                    <div class="p-4 rounded-xl glass-input space-y-2">
+                        <div class="flex items-center gap-2 font-mono text-xs font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="image" class="w-4 h-4"></i>
+                            <span data-i18n="catImages">Изображения</span>
+                        </div>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="inputLabel">Вход:</strong> PNG, JPG/JPEG, WEBP, GIF, BMP, SVG, ICO
+                        </p>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="outputLabel">Выход:</strong> PNG, JPG, WEBP, BMP, ICO (Multi-size), PDF
+                        </p>
+                    </div>
+
+                    <!-- Audio Card -->
+                    <div class="p-4 rounded-xl glass-input space-y-2">
+                        <div class="flex items-center gap-2 font-mono text-xs font-semibold text-[var(--accent-emerald-text)] uppercase">
+                            <i data-lucide="audio-waveform" class="w-4 h-4"></i>
+                            <span data-i18n="catAudio">Аудио</span>
+                        </div>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="inputLabel">Вход:</strong> MP3, WAV, OGG, FLAC, M4A, AAC
+                        </p>
+                        <p class="text-xs text-[var(--text-secondary)]">
+                            <strong data-i18n="outputLabel">Выход:</strong> WAV (16-bit PCM), MP3 (128–320 kbps), JSON (Spectrum)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /**
+         * convert.local — Client-Side File Converter
+         * Self-contained local conversion engine for Documents, Spreadsheets/Data, Images & Audio.
+         */
+
+        // ==========================================
+        // 1. BILINGUAL DICTIONARY (RU / EN)
+        // ==========================================
+        const I18N = {
+            ru: {
+                themeDark: 'ТЁМНАЯ',
+                themeLight: 'СВЕТЛАЯ',
+                heroTitle: 'Локальный конвертер файлов студийного класса',
+                heroSubtitle: 'Мгновенная конвертация документов, таблиц, изображений и аудио прямо в памяти вашего браузера. Файлы никогда не загружаются на сервер — полная приватность и контроль параметров экспорта.',
+                catAll: 'ВСЕ',
+                catDocuments: 'ДОКУМЕНТЫ',
+                catSpreadsheets: 'ТАБЛИЦЫ И ДАННЫЕ',
+                catImages: 'ИЗОБРАЖЕНИЯ',
+                catAudio: 'АУДИО',
+                supportedFormatsBtn: 'Поддерживаемые форматы',
+                dropTitle: 'Перетащите файлы сюда или выберите на устройстве',
+                dropSummary: 'Документы (PDF, DOCX, RTF, MD, HTML, TXT) · Таблицы и данные (XLSX, XLS, CSV, TSV, JSON, YAML, XML) · Изображения (PNG, JPG, WEBP, GIF, BMP, SVG, ICO) · Аудио (MP3, WAV, OGG, FLAC, M4A, AAC)',
+                selectFilesBtn: 'Выбрать файлы',
+                filesCountLabel: 'ФАЙЛОВ:',
+                globalTargetLabel: 'Конвертировать все в:',
+                selectPlaceholder: '— Выбрать формат —',
+                convertAllBtn: 'Конвертировать всё',
+                downloadZipBtn: 'Скачать ZIP',
+                buildingZipBtn: 'Сборка ZIP...',
+                clearAllBtn: 'Очистить',
+                settingsHeading: 'Параметры конвертации',
+                settingsEmptyHint: 'Добавьте файлы в очередь — здесь появятся подходящие параметры',
+                settingsDocsTitle: 'Документы и текст',
+                pdfPageSizeLabel: 'Размер страницы PDF',
+                docFontSizeLabel: 'Размер шрифта',
+                docLineSpacingLabel: 'Интервал',
+                settingsTablesTitle: 'Таблицы и данные',
+                csvDelimiterLabel: 'Разделитель CSV',
+                csvSemicolon: '; (Точка с запятой)',
+                csvComma: ', (Запятая)',
+                csvTab: 'Tab (Табуляция)',
+                jsonFormatLabel: 'Формат JSON',
+                jsonPretty: 'Форматированный (2 пробела)',
+                jsonMinified: 'Сжатый (Minified)',
+                settingsImagesTitle: 'Изображения',
+                imgQualityLabel: 'Качество сжатия',
+                imgScaleLabel: 'Масштаб',
+                imgMaxWidthLabel: 'Макс. ширина',
+                imgMaxOriginal: 'Оригинал',
+                settingsAudioTitle: 'Аудио',
+                audioRateLabel: 'Частота',
+                audioBitrateLabel: 'Битрейт MP3',
+                audioChannelsLabel: 'Каналы',
+                audioStereo: 'Стерео (Stereo)',
+                audioMono: 'Моно (Mono)',
+                footerNote: 'Все операции выполняются локально в вашем браузере без отправки файлов в сеть.',
+                formatsModalTitle: 'Поддерживаемые форматы и направления',
+                inputLabel: 'Вход:',
+                outputLabel: 'Выход:',
+                statusReady: 'Готов',
+                statusProcessing: 'Обработка',
+                statusDone: 'Готово',
+                statusError: 'Ошибка',
+                convertBtn: 'Конвертировать',
+                downloadBtn: 'Скачать',
+                removeTooltip: 'Удалить файл',
+                emptyCatMessage: 'В выбранной категории нет файлов.',
+                toastUnsupported: 'Неподдерживаемый формат файла: «{name}»',
+                toastAdded: 'Добавлено файлов: {count}',
+                toastBatchTarget: 'Формат {fmt} установлен для {count} файл(ов)',
+                toastBatchComplete: 'Пакетная конвертация завершена',
+                toastZipReady: 'Архив ZIP готов ({count} файлов)',
+                toastZipError: 'Ошибка при создании ZIP-архива',
+                toastCleared: 'Очередь файлов очищена',
+                toastError: 'Ошибка ({name}): {msg}',
+                byteUnits: ['Б', 'КБ', 'МБ', 'ГБ']
+            },
+            en: {
+                themeDark: 'DARK',
+                themeLight: 'LIGHT',
+                heroTitle: 'Studio-Grade Local File Converter',
+                heroSubtitle: 'Instantly transcode documents, spreadsheets, images, and audio directly inside browser memory. Your files never leave your device — complete privacy with granular export controls.',
+                catAll: 'ALL',
+                catDocuments: 'DOCUMENTS',
+                catSpreadsheets: 'SPREADSHEETS & DATA',
+                catImages: 'IMAGES',
+                catAudio: 'AUDIO',
+                supportedFormatsBtn: 'Supported Formats',
+                dropTitle: 'Drag and drop files here or browse from device',
+                dropSummary: 'Documents (PDF, DOCX, RTF, MD, HTML, TXT) · Spreadsheets & Data (XLSX, XLS, CSV, TSV, JSON, YAML, XML) · Images (PNG, JPG, WEBP, GIF, BMP, SVG, ICO) · Audio (MP3, WAV, OGG, FLAC, M4A, AAC)',
+                selectFilesBtn: 'Select Files',
+                filesCountLabel: 'FILES:',
+                globalTargetLabel: 'Convert all to:',
+                selectPlaceholder: '— Select format —',
+                convertAllBtn: 'Convert All',
+                downloadZipBtn: 'Download ZIP',
+                buildingZipBtn: 'Building ZIP...',
+                clearAllBtn: 'Clear All',
+                settingsHeading: 'Conversion Settings',
+                settingsEmptyHint: 'Add files to queue — relevant settings will appear here',
+                settingsDocsTitle: 'Documents & Text',
+                pdfPageSizeLabel: 'PDF Page Size',
+                docFontSizeLabel: 'Font Size',
+                docLineSpacingLabel: 'Line Spacing',
+                settingsTablesTitle: 'Tables & Data',
+                csvDelimiterLabel: 'CSV Delimiter',
+                csvSemicolon: '; (Semicolon)',
+                csvComma: ', (Comma)',
+                csvTab: 'Tab',
+                jsonFormatLabel: 'JSON Format',
+                jsonPretty: 'Prettify (2 spaces)',
+                jsonMinified: 'Minified',
+                settingsImagesTitle: 'Images',
+                imgQualityLabel: 'Compression Quality',
+                imgScaleLabel: 'Scale',
+                imgMaxWidthLabel: 'Max Width',
+                imgMaxOriginal: 'Original',
+                settingsAudioTitle: 'Audio',
+                audioRateLabel: 'Sample Rate',
+                audioBitrateLabel: 'MP3 Bitrate',
+                audioChannelsLabel: 'Channels',
+                audioStereo: 'Stereo',
+                audioMono: 'Mono',
+                footerNote: 'All operations run 100% locally in your browser. Files never leave your device.',
+                formatsModalTitle: 'Supported Formats & Conversion Directions',
+                inputLabel: 'Input:',
+                outputLabel: 'Output:',
+                statusReady: 'Ready',
+                statusProcessing: 'Processing',
+                statusDone: 'Done',
+                statusError: 'Error',
+                convertBtn: 'Convert',
+                downloadBtn: 'Download',
+                removeTooltip: 'Remove file',
+                emptyCatMessage: 'No files in the selected category.',
+                toastUnsupported: 'Unsupported file format: "{name}"',
+                toastAdded: 'Added {count} file(s) to queue',
+                toastBatchTarget: 'Target format {fmt} set for {count} file(s)',
+                toastBatchComplete: 'Batch conversion completed',
+                toastZipReady: 'ZIP archive ready ({count} files)',
+                toastZipError: 'Failed to create ZIP archive',
+                toastCleared: 'File queue cleared',
+                toastError: 'Error ({name}): {msg}',
+                byteUnits: ['B', 'KB', 'MB', 'GB']
+            }
+        };
+
+        // ==========================================
+        // 2. APPLICATION STATE & FORMAT MATRIX
+        // ==========================================
+        const FORMAT_GROUPS = {
+            document: {
+                inputs: ['pdf', 'docx', 'doc', 'rtf', 'md', 'markdown', 'html', 'htm', 'txt'],
+                outputs: ['pdf', 'docx', 'txt', 'html', 'md', 'rtf']
+            },
+            table: {
+                inputs: ['xlsx', 'xls', 'csv', 'tsv', 'json', 'yaml', 'yml', 'xml'],
+                outputs: ['xlsx', 'csv', 'tsv', 'json', 'yaml', 'xml', 'html', 'pdf']
+            },
+            image: {
+                inputs: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg', 'ico'],
+                outputs: ['png', 'jpg', 'webp', 'bmp', 'ico', 'pdf']
+            },
+            audio: {
+                inputs: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'],
+                outputs: ['wav', 'mp3', 'json']
+            }
+        };
+
+        const state = {
+            theme: localStorage.getItem('convert_local_theme') || 'light',
+            lang: localStorage.getItem('convert_local_lang') || localStorage.getItem('flux_lang') || 'ru',
+            activeCategory: 'all',
+            files: [],
+            settings: {
+                pdfPageSize: 'a4',
+                docFontSize: 11,
+                docLineSpacing: 1.5,
+                csvDelimiter: ',',
+                jsonFormat: 'pretty',
+                imgQuality: 0.88,
+                imgScale: 1,
+                imgMaxWidth: 0,
+                audioRate: 44100,
+                audioBitrate: 192,
+                audioChannels: 2
+            }
+        };
+
+        // ==========================================
+        // 3. THEME & LANGUAGE MANAGEMENT
+        // ==========================================
+        function t(key, vars = {}) {
+            const dict = I18N[state.lang] || I18N.ru;
+            let str = dict[key] || I18N.ru[key] || key;
+            for (const [k, v] of Object.entries(vars)) {
+                str = str.replace(`{${k}}`, v);
+            }
+            return str;
+        }
+
+        function applyTheme(theme) {
+            state.theme = theme === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', state.theme);
+            localStorage.setItem('convert_local_theme', state.theme);
+
+            const activeCls = 'bg-[var(--accent-emerald)] text-[var(--btn-primary-text)] shadow-sm';
+            const inactiveCls = 'text-[var(--text-muted)] hover:text-[var(--text-primary)]';
+
+            const darkBtn = document.getElementById('themeDarkBtn');
+            const lightBtn = document.getElementById('themeLightBtn');
+
+            if (darkBtn && lightBtn) {
+                darkBtn.className = `px-3 py-1 rounded-full font-mono text-[11px] font-medium transition-all flex items-center gap-1.5 ${state.theme === 'dark' ? activeCls : inactiveCls}`;
+                lightBtn.className = `px-3 py-1 rounded-full font-mono text-[11px] font-medium transition-all flex items-center gap-1.5 ${state.theme === 'light' ? activeCls : inactiveCls}`;
+            }
+        }
+
+        function applyLanguage(lang) {
+            state.lang = lang === 'en' ? 'en' : 'ru';
+            document.documentElement.setAttribute('lang', state.lang);
+            localStorage.setItem('convert_local_lang', state.lang);
+
+            const activeCls = 'bg-[var(--accent-emerald)] text-[var(--btn-primary-text)] shadow-sm';
+            const inactiveCls = 'text-[var(--text-muted)] hover:text-[var(--text-primary)]';
+
+            const ruBtn = document.getElementById('langRuBtn');
+            const enBtn = document.getElementById('langEnBtn');
+            if (ruBtn && enBtn) {
+                ruBtn.className = `px-2.5 py-1 rounded-full font-mono text-[11px] font-semibold transition-all ${state.lang === 'ru' ? activeCls : inactiveCls}`;
+                enBtn.className = `px-2.5 py-1 rounded-full font-mono text-[11px] font-semibold transition-all ${state.lang === 'en' ? activeCls : inactiveCls}`;
+            }
+
+            document.querySelectorAll('[data-i18n]').forEach((el) => {
+                const key = el.getAttribute('data-i18n');
+                if (key) {
+                    el.textContent = t(key);
+                }
+            });
+
+            renderCategoryTabs();
+            renderQueue();
+        }
+
+        // ==========================================
+        // 4. UI UTILITIES & NOTIFICATIONS
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const borderColor = type === 'error'
+                ? 'border-red-500/40 text-red-500'
+                : type === 'success'
+                    ? 'border-[var(--accent-emerald)] text-[var(--accent-emerald-text)]'
+                    : 'border-[var(--border-outer)] text-[var(--text-primary)]';
+
+            toast.className = `pointer-events-auto liquid-glass-elevated px-4 py-2.5 rounded-xl text-xs font-medium flex items-center gap-2 transition-all duration-200 ${borderColor}`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(6px)';
+                setTimeout(() => toast.remove(), 220);
+            }, 3200);
+        }
+
+        function formatBytes(bytes) {
+            const units = t('byteUnits');
+            if (!bytes || bytes === 0) return `0 ${units[0]}`;
+            const k = 1024;
+            const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+            const val = bytes / Math.pow(k, i);
+            return `${val >= 10 || i === 0 ? val.toFixed(0) : val.toFixed(1)} ${units[i]}`;
+        }
+
+        function getExtension(filename) {
+            const parts = filename.split('.');
+            return parts.length > 1 ? parts.pop().toLowerCase() : '';
+        }
+
+        function getBaseName(filename) {
+            const idx = filename.lastIndexOf('.');
+            return idx > 0 ? filename.substring(0, idx) : filename;
+        }
+
+        function detectCategory(file) {
+            const ext = getExtension(file.name);
+            for (const [cat, info] of Object.entries(FORMAT_GROUPS)) {
+                if (info.inputs.includes(ext)) return cat;
+            }
+            if (file.type.startsWith('image/')) return 'image';
+            if (file.type.startsWith('audio/')) return 'audio';
+            if (file.type.startsWith('text/')) return 'document';
+            return null;
+        }
+
+        function getTargetOptionsForItem(item) {
+            const group = FORMAT_GROUPS[item.category];
+            if (!group) return [];
+            const normalizedSource = item.ext === 'jpeg' ? 'jpg' : item.ext === 'markdown' ? 'md' : item.ext === 'htm' ? 'html' : item.ext === 'yml' ? 'yaml' : item.ext;
+            if (item.category === 'image' || item.category === 'audio') {
+                return group.outputs;
+            }
+            const filtered = group.outputs.filter((fmt) => fmt !== normalizedSource);
+            return filtered.length > 0 ? filtered : group.outputs;
+        }
+
+        // ==========================================
+        // 5. CATEGORY TABS & CONTEXTUAL SETTINGS
+        // ==========================================
+        function renderCategoryTabs() {
+            const labels = {
+                all: t('catAll'),
+                document: t('catDocuments'),
+                table: t('catSpreadsheets'),
+                image: t('catImages'),
+                audio: t('catAudio')
+            };
+
+            document.querySelectorAll('.cat-tab').forEach((btn) => {
+                const cat = btn.getAttribute('data-cat');
+                const count = cat === 'all'
+                    ? state.files.length
+                    : state.files.filter((f) => f.category === cat).length;
+
+                btn.textContent = count > 0 ? `${labels[cat]} (${count})` : labels[cat];
+
+                if (state.activeCategory === cat) {
+                    btn.className = 'cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-semibold flex items-center justify-center transition-all bg-[var(--accent-emerald)] text-[var(--btn-primary-text)] shadow-sm';
+                } else {
+                    btn.className = 'cat-tab h-[28px] px-3.5 rounded-xl font-mono text-xs font-medium flex items-center justify-center transition-all text-[var(--text-secondary)] hover:bg-[var(--glass-hover)]';
+                }
+            });
+        }
+
+        function updateContextualSettingsVisibility() {
+            const hasDocs = state.files.some(
+                (f) => f.category === 'document' || ['pdf', 'docx', 'txt', 'html', 'md', 'rtf'].includes(f.targetFormat)
+            );
+            const hasTables = state.files.some(
+                (f) => f.category === 'table' || ['csv', 'tsv', 'json', 'yaml', 'xml', 'xlsx'].includes(f.targetFormat)
+            );
+            const hasImages = state.files.some((f) => f.category === 'image');
+            const hasAudio = state.files.some((f) => f.category === 'audio');
+
+            const docsEl = document.getElementById('settingsGroupDocs');
+            const tablesEl = document.getElementById('settingsGroupTables');
+            const imagesEl = document.getElementById('settingsGroupImages');
+            const audioEl = document.getElementById('settingsGroupAudio');
+            const emptyHint = document.getElementById('settingsEmptyHint');
+
+            if (docsEl) docsEl.classList.toggle('hidden', !hasDocs);
+            if (tablesEl) tablesEl.classList.toggle('hidden', !hasTables);
+            if (imagesEl) imagesEl.classList.toggle('hidden', !hasImages);
+            if (audioEl) audioEl.classList.toggle('hidden', !hasAudio);
+
+            const anyVisible = hasDocs || hasTables || hasImages || hasAudio;
+            if (emptyHint) emptyHint.classList.toggle('hidden', anyVisible);
+        }
+
+        function updateGlobalTargetDropdown() {
+            const select = document.getElementById('globalTargetSelect');
+            if (!select) return;
+
+            const currentVal = select.value;
+            const availableTargets = new Set();
+
+            const relevantFiles = state.activeCategory === 'all'
+                ? state.files
+                : state.files.filter((f) => f.category === state.activeCategory);
+
+            relevantFiles.forEach((item) => {
+                getTargetOptionsForItem(item).forEach((fmt) => availableTargets.add(fmt));
+            });
+
+            select.innerHTML = `<option value="">${t('selectPlaceholder')}</option>`;
+            Array.from(availableTargets).forEach((fmt) => {
+                const opt = document.createElement('option');
+                opt.value = fmt;
+                opt.textContent = fmt.toUpperCase();
+                select.appendChild(opt);
+            });
+
+            if (availableTargets.has(currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        // ==========================================
+        // 6. QUEUE MANAGEMENT & RENDERING
+        // ==========================================
+        function addFilesToQueue(fileListObj) {
+            const incoming = Array.from(fileListObj || []);
+            if (incoming.length === 0) return;
+
+            let addedCount = 0;
+
+            incoming.forEach((file) => {
+                const category = detectCategory(file);
+                if (!category) {
+                    showToast(t('toastUnsupported', { name: file.name }), 'error');
+                    return;
+                }
+
+                const ext = getExtension(file.name) || 'bin';
+                const item = {
+                    id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                    file,
+                    name: file.name,
+                    size: file.size,
+                    ext,
+                    category,
+                    targetFormat: '',
+                    status: 'ready',
+                    outputBlob: null,
+                    outputName: '',
+                    errorMessage: ''
+                };
+
+                const options = getTargetOptionsForItem(item);
+                if (options.length > 0) {
+                    item.targetFormat = options[0];
+                }
+
+                state.files.push(item);
+                addedCount++;
+            });
+
+            if (addedCount > 0) {
+                showToast(t('toastAdded', { count: addedCount }), 'success');
+                renderCategoryTabs();
+                renderQueue();
+            }
+        }
+
+        function renderQueue() {
+            const workspace = document.getElementById('workspaceSection');
+            const listEl = document.getElementById('fileList');
+            const countEl = document.getElementById('queueCount');
+            const totalSizeEl = document.getElementById('totalSize');
+            const zipBtn = document.getElementById('downloadZipBtn');
+
+            if (!workspace || !listEl) return;
+
+            if (state.files.length === 0) {
+                workspace.classList.add('hidden');
+                updateContextualSettingsVisibility();
+                return;
+            }
+
+            workspace.classList.remove('hidden');
+
+            const totalBytes = state.files.reduce((acc, f) => acc + f.size, 0);
+            if (countEl) countEl.textContent = String(state.files.length);
+            if (totalSizeEl) totalSizeEl.textContent = formatBytes(totalBytes);
+
+            const doneCount = state.files.filter((f) => f.status === 'done' && f.outputBlob).length;
+            if (zipBtn) zipBtn.disabled = doneCount === 0;
+
+            updateGlobalTargetDropdown();
+            updateContextualSettingsVisibility();
+
+            const filteredFiles = state.activeCategory === 'all'
+                ? state.files
+                : state.files.filter((f) => f.category === state.activeCategory);
+
+            if (filteredFiles.length === 0) {
+                listEl.innerHTML = `
+                    <div class="rounded-2xl liquid-glass p-8 text-center text-xs text-[var(--text-muted)]">
+                        ${t('emptyCatMessage')}
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = filteredFiles.map((item) => {
+                const options = getTargetOptionsForItem(item);
+                const optionsHtml = options.map((fmt) =>
+                    `<option value="${fmt}" ${item.targetFormat === fmt ? 'selected' : ''}>${fmt.toUpperCase()}</option>`
+                ).join('');
+
+                let statusBadge = '';
+                if (item.status === 'ready') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-md font-mono text-[10px] glass-input text-[var(--text-muted)]">${t('statusReady')}</span>`;
+                } else if (item.status === 'processing') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-md font-mono text-[10px] bg-amber-500/15 text-amber-600 border border-amber-500/30 animate-pulse">${t('statusProcessing')}...</span>`;
+                } else if (item.status === 'done') {
+                    const outSize = item.outputBlob ? ` • ${formatBytes(item.outputBlob.size)}` : '';
+                    statusBadge = `<span class="px-2 py-0.5 rounded-md font-mono text-[10px] bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald-text)] border border-[var(--accent-emerald)]/30">${t('statusDone')}${outSize}</span>`;
+                } else if (item.status === 'error') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-md font-mono text-[10px] bg-red-500/15 text-red-500 border border-red-500/30" title="${escapeHtml(item.errorMessage)}">${t('statusError')}</span>`;
+                }
+
+                const actionBtnHtml = item.status === 'done' && item.outputBlob
+                    ? `<button type="button" data-action="download" data-id="${item.id}" class="px-3 py-1.5 rounded-xl btn-emerald font-medium text-xs flex items-center gap-1.5 shrink-0">
+                           <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                           <span>${t('downloadBtn')}</span>
+                       </button>`
+                    : `<button type="button" data-action="convert" data-id="${item.id}" ${item.status === 'processing' ? 'disabled' : ''} class="px-3 py-1.5 rounded-xl btn-secondary disabled:opacity-40 font-medium text-xs flex items-center gap-1.5 shrink-0">
+                           <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[var(--accent-emerald)] ${item.status === 'processing' ? 'animate-spin' : ''}"></i>
+                           <span>${t('convertBtn')}</span>
+                       </button>`;
+
+                return `
+                    <div class="rounded-2xl liquid-glass p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl glass-input flex items-center justify-center font-mono text-[11px] font-semibold uppercase text-[var(--accent-emerald-text)] shrink-0">
+                                ${escapeHtml(item.ext.slice(0, 4))}
+                            </div>
+                            <div class="min-w-0 space-y-1">
+                                <div class="text-xs sm:text-sm font-medium truncate" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                                <div class="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)] font-mono">
+                                    <span>${formatBytes(item.size)}</span>
+                                    ${statusBadge}
+                                </div>
+                                ${item.status === 'error' && item.errorMessage ? `<div class="text-[11px] text-red-500 truncate">${escapeHtml(item.errorMessage)}</div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-[var(--text-muted)]"></i>
+                                <select data-action="target" data-id="${item.id}" class="glass-input rounded-xl pl-3.5 pr-8 py-1.5 min-w-[92px] font-mono text-xs font-semibold text-[var(--accent-emerald-text)] cursor-pointer">
+                                    ${optionsHtml}
+                                </select>
+                            </div>
+
+                            ${actionBtnHtml}
+
+                            <button type="button" data-action="remove" data-id="${item.id}" title="${t('removeTooltip')}" class="p-1.5 rounded-xl btn-secondary text-[var(--text-muted)] hover:text-red-500 shrink-0">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // ==========================================
+        // 7. CONVERSION ENGINES (DOCS, TABLES, IMAGES, AUDIO)
+        // ==========================================
+        async function convertSingleItem(id) {
+            const item = state.files.find((f) => f.id === id);
+            if (!item || !item.targetFormat) return;
+
+            item.status = 'processing';
+            item.errorMessage = '';
+            item.outputBlob = null;
+            renderQueue();
+
+            try {
+                let blob;
+                if (item.category === 'document') {
+                    blob = await convertDocumentFile(item);
+                } else if (item.category === 'table') {
+                    blob = await convertTableFile(item);
+                } else if (item.category === 'image') {
+                    blob = await convertImageFile(item);
+                } else if (item.category === 'audio') {
+                    blob = await convertAudioFile(item);
+                } else {
+                    throw new Error('Unsupported file category');
+                }
+
+                item.outputBlob = blob;
+                item.outputName = `${getBaseName(item.name)}.${item.targetFormat}`;
+                item.status = 'done';
+            } catch (err) {
+                console.error('Conversion error:', err);
+                item.status = 'error';
+                item.errorMessage = err && err.message ? err.message : String(err);
+                showToast(t('toastError', { name: item.name, msg: item.errorMessage }), 'error');
+            }
+
+            renderQueue();
+        }
+
+        async function convertAllItems() {
+            const targets = state.activeCategory === 'all'
+                ? state.files
+                : state.files.filter((f) => f.category === state.activeCategory);
+
+            for (const item of targets) {
+                if (item.status !== 'done') {
+                    await convertSingleItem(item.id);
+                }
+            }
+
+            if (targets.some((f) => f.status === 'done')) {
+                showToast(t('toastBatchComplete'), 'success');
+            }
+        }
+
+        function triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 150);
+        }
+
+        async function downloadAllAsZip() {
+            const readyFiles = state.files.filter((f) => f.status === 'done' && f.outputBlob);
+            if (readyFiles.length === 0) return;
+
+            const zipBtn = document.getElementById('downloadZipBtn');
+            const labelSpan = zipBtn ? zipBtn.querySelector('span') : null;
+            if (zipBtn) zipBtn.disabled = true;
+            if (labelSpan) labelSpan.textContent = t('buildingZipBtn');
+
+            try {
+                const zip = new JSZip();
+                const usedNames = new Map();
+
+                readyFiles.forEach((item) => {
+                    let fname = item.outputName || `${getBaseName(item.name)}.${item.targetFormat}`;
+                    if (usedNames.has(fname)) {
+                        const count = usedNames.get(fname) + 1;
+                        usedNames.set(fname, count);
+                        fname = `${getBaseName(fname)}_${count}.${getExtension(fname)}`;
+                    } else {
+                        usedNames.set(fname, 1);
+                    }
+                    zip.file(fname, item.outputBlob);
+                });
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                triggerDownload(blob, `convert_local_${new Date().toISOString().slice(0, 10)}.zip`);
+                showToast(t('toastZipReady', { count: readyFiles.length }), 'success');
+            } catch (err) {
+                console.error('ZIP error:', err);
+                showToast(t('toastZipError'), 'error');
+            } finally {
+                if (zipBtn) zipBtn.disabled = false;
+                if (labelSpan) labelSpan.textContent = t('downloadZipBtn');
+            }
+        }
+
+        // ---------- 7A. DOCUMENT ENGINE ----------
+        async function extractDocumentText(item) {
+            const ext = item.ext;
+            if (ext === 'pdf') {
+                if (!window.pdfjsLib) throw new Error('PDF.js library unavailable');
+                const buf = await item.file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                const pages = [];
+                for (let p = 1; p <= pdf.numPages; p++) {
+                    const page = await pdf.getPage(p);
+                    const content = await page.getTextContent();
+                    const line = content.items.map((it) => it.str).join(' ');
+                    pages.push(line);
+                }
+                return pages.join('\n\n');
+            }
+
+            if (ext === 'docx') {
+                if (!window.mammoth) throw new Error('Mammoth.js library unavailable');
+                const buf = await item.file.arrayBuffer();
+                const res = await mammoth.extractRawText({ arrayBuffer: buf });
+                return res.value || '';
+            }
+
+            const rawText = await item.file.text();
+
+            if (ext === 'html' || ext === 'htm') {
+                const doc = new DOMParser().parseFromString(rawText, 'text/html');
+                return doc.body ? (doc.body.innerText || doc.body.textContent || '') : rawText;
+            }
+
+            if (ext === 'rtf') {
+                return stripRtf(rawText);
+            }
+
+            return rawText;
+        }
+
+        function stripRtf(rtf) {
+            return rtf
+                .replace(/\\par[d]?/g, '\n')
+                .replace(/\\line/g, '\n')
+                .replace(/\\tab/g, '\t')
+                .replace(/\\u(-?\d+)\??/g, (_, code) => {
+                    const num = parseInt(code, 10);
+                    return String.fromCharCode(num < 0 ? num + 65536 : num);
+                })
+                .replace(/\\'([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+                .replace(/\{\\[^{}]+\}/g, '')
+                .replace(/\\[a-zA-Z]+-?\d* ?/g, '')
+                .replace(/[{}]/g, '')
+                .trim();
+        }
+
+        async function convertDocumentFile(item) {
+            const text = await extractDocumentText(item);
+            const target = item.targetFormat;
+
+            if (target === 'txt') {
+                return new Blob([text], { type: 'text/plain;charset=utf-8' });
+            }
+
+            if (target === 'md') {
+                return new Blob([text], { type: 'text/markdown;charset=utf-8' });
+            }
+
+            if (target === 'html') {
+                let bodyHtml = '';
+                if ((item.ext === 'md' || item.ext === 'markdown') && window.marked) {
+                    bodyHtml = marked.parse(text);
+                } else {
+                    bodyHtml = text
+                        .split(/\n{2,}/)
+                        .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+                        .join('\n');
+                }
+                const htmlDoc = `<!DOCTYPE html>
+<html lang="${state.lang}">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(getBaseName(item.name))}</title>
+<style>
+body { font-family: Inter, -apple-system, sans-serif; max-width: 780px; margin: 40px auto; padding: 0 24px; line-height: ${state.settings.docLineSpacing}; font-size: ${state.settings.docFontSize}pt; color: #111827; }
+p { margin-bottom: 1em; }
+</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
+                return new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
+            }
+
+            if (target === 'rtf') {
+                const rtfEscaped = Array.from(text).map((ch) => {
+                    const code = ch.charCodeAt(0);
+                    if (ch === '\\') return '\\\\';
+                    if (ch === '{') return '\\{';
+                    if (ch === '}') return '\\}';
+                    if (ch === '\n') return '\\par\n';
+                    if (code > 127) return `\\u${code}?`;
+                    return ch;
+                }).join('');
+                const fsHalfPt = Math.round(state.settings.docFontSize * 2);
+                const rtfContent = `{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Arial;}}\\fs${fsHalfPt}\n${rtfEscaped}\n}`;
+                return new Blob([rtfContent], { type: 'application/rtf' });
+            }
+
+            if (target === 'docx') {
+                return await createValidDocxBlob(text);
+            }
+
+            if (target === 'pdf') {
+                return await renderTextToPdfBlob(text, getBaseName(item.name));
+            }
+
+            throw new Error(`Unsupported target format: ${target}`);
+        }
+
+        async function createValidDocxBlob(text) {
+            const zip = new JSZip();
+
+            const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+            const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+            const halfPt = Math.round(state.settings.docFontSize * 2);
+            const paragraphsXml = text.split(/\r?\n/).map((line) => {
+                const escaped = escapeHtml(line);
+                return `<w:p><w:r><w:rPr><w:sz w:val="${halfPt}"/><w:szCs w:val="${halfPt}"/></w:rPr><w:t xml:space="preserve">${escaped}</w:t></w:r></w:p>`;
+            }).join('');
+
+            const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${paragraphsXml}
+  </w:body>
+</w:document>`;
+
+            zip.file('[Content_Types].xml', contentTypes);
+            zip.folder('_rels').file('.rels', rels);
+            zip.folder('word').file('document.xml', documentXml);
+
+            return await zip.generateAsync({
+                type: 'blob',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
+        }
+
+        async function renderTextToPdfBlob(text, title) {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                throw new Error('jsPDF library unavailable');
+            }
+            const { jsPDF } = window.jspdf;
+            const pageFormat = state.settings.pdfPageSize || 'a4';
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pageFormat });
+
+            const pageWidthMm = doc.internal.pageSize.getWidth();
+            const pageHeightMm = doc.internal.pageSize.getHeight();
+
+            const dpiScale = 2.2;
+            const pxPerMm = 3.7795 * dpiScale;
+            const canvasW = Math.round(pageWidthMm * pxPerMm);
+            const canvasH = Math.round(pageHeightMm * pxPerMm);
+            const marginPx = Math.round(18 * pxPerMm);
+            const maxLineW = canvasW - marginPx * 2;
+
+            const fontSizePx = Math.round(state.settings.docFontSize * 1.333 * dpiScale);
+            const lineHeightPx = Math.round(fontSizePx * state.settings.docLineSpacing);
+
+            const measureCanvas = document.createElement('canvas');
+            const mCtx = measureCanvas.getContext('2d');
+            mCtx.font = `${fontSizePx}px Inter, Arial, sans-serif`;
+
+            const wrappedLines = [];
+            const rawParagraphs = text.split(/\r?\n/);
+
+            for (const para of rawParagraphs) {
+                if (para.trim() === '') {
+                    wrappedLines.push('');
+                    continue;
+                }
+                const words = para.split(/\s+/);
+                let currentLine = '';
+                for (const word of words) {
+                    const candidate = currentLine ? `${currentLine} ${word}` : word;
+                    if (mCtx.measureText(candidate).width <= maxLineW) {
+                        currentLine = candidate;
+                    } else {
+                        if (currentLine) wrappedLines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                if (currentLine) wrappedLines.push(currentLine);
+            }
+
+            const linesPerPage = Math.max(1, Math.floor((canvasH - marginPx * 2) / lineHeightPx));
+            const totalPages = Math.max(1, Math.ceil(wrappedLines.length / linesPerPage));
+
+            doc.setProperties({ title });
+
+            for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+                if (pageIdx > 0) doc.addPage(pageFormat, 'portrait');
+
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = canvasW;
+                pageCanvas.height = canvasH;
+                const ctx = pageCanvas.getContext('2d');
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvasW, canvasH);
+
+                ctx.fillStyle = '#111827';
+                ctx.font = `${fontSizePx}px Inter, Arial, sans-serif`;
+                ctx.textBaseline = 'top';
+
+                const slice = wrappedLines.slice(pageIdx * linesPerPage, (pageIdx + 1) * linesPerPage);
+                slice.forEach((line, idx) => {
+                    ctx.fillText(line, marginPx, marginPx + idx * lineHeightPx);
+                });
+
+                const imgData = pageCanvas.toDataURL('image/jpeg', 0.92);
+                doc.addImage(imgData, 'JPEG', 0, 0, pageWidthMm, pageHeightMm);
+            }
+
+            return doc.output('blob');
+        }
+
+        // ---------- 7B. TABLE & DATA ENGINE ----------
+        async function parseTableRows(item) {
+            const ext = item.ext;
+
+            if (ext === 'xlsx' || ext === 'xls') {
+                if (!window.XLSX) throw new Error('SheetJS library unavailable');
+                const buf = await item.file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                const firstSheet = wb.Sheets[wb.SheetNames[0]];
+                return XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+            }
+
+            const raw = await item.file.text();
+
+            if (ext === 'csv' || ext === 'tsv') {
+                if (!window.XLSX) throw new Error('SheetJS library unavailable');
+                const wb = XLSX.read(raw, { type: 'string' });
+                const firstSheet = wb.Sheets[wb.SheetNames[0]];
+                return XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+            }
+
+            if (ext === 'json') {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+                if (parsed && typeof parsed === 'object') {
+                    const firstArrayKey = Object.keys(parsed).find((k) => Array.isArray(parsed[k]));
+                    return firstArrayKey ? parsed[firstArrayKey] : [parsed];
+                }
+                return [{ value: parsed }];
+            }
+
+            if (ext === 'yaml' || ext === 'yml') {
+                if (!window.jsyaml) throw new Error('js-yaml library unavailable');
+                const parsed = jsyaml.load(raw);
+                if (Array.isArray(parsed)) return parsed;
+                return parsed && typeof parsed === 'object' ? [parsed] : [{ value: parsed }];
+            }
+
+            if (ext === 'xml') {
+                const doc = new DOMParser().parseFromString(raw, 'application/xml');
+                const parserErr = doc.querySelector('parsererror');
+                if (parserErr) throw new Error('Invalid XML syntax');
+                const root = doc.documentElement;
+                const children = Array.from(root.children);
+                if (children.length === 0) {
+                    return [{ [root.nodeName]: root.textContent || '' }];
+                }
+                return children.map((node) => {
+                    if (node.children.length === 0) {
+                        return { [node.nodeName]: node.textContent || '' };
+                    }
+                    const row = {};
+                    Array.from(node.children).forEach((cell) => {
+                        row[cell.nodeName] = cell.textContent || '';
+                    });
+                    return row;
+                });
+            }
+
+            throw new Error(`Unsupported table input: ${ext}`);
+        }
+
+        async function convertTableFile(item) {
+            const rows = await parseTableRows(item);
+            const target = item.targetFormat;
+
+            if (target === 'json') {
+                const space = state.settings.jsonFormat === 'minified' ? 0 : 2;
+                return new Blob([JSON.stringify(rows, null, space)], { type: 'application/json;charset=utf-8' });
+            }
+
+            if (target === 'yaml') {
+                if (!window.jsyaml) throw new Error('js-yaml library unavailable');
+                return new Blob([jsyaml.dump(rows)], { type: 'text/yaml;charset=utf-8' });
+            }
+
+            if (target === 'xml') {
+                const itemsXml = rows.map((row) => {
+                    const fields = Object.entries(row || {}).map(([k, v]) => {
+                        const tag = k.replace(/[^a-zA-Z0-9_-]/g, '_') || 'field';
+                        return `    <${tag}>${escapeHtml(v == null ? '' : String(v))}</${tag}>`;
+                    }).join('\n');
+                    return `  <row>\n${fields}\n  </row>`;
+                }).join('\n');
+                const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<dataset>\n${itemsXml}\n</dataset>`;
+                return new Blob([xml], { type: 'application/xml;charset=utf-8' });
+            }
+
+            if (!window.XLSX) throw new Error('SheetJS library unavailable');
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Data');
+
+            if (target === 'xlsx') {
+                const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            }
+
+            if (target === 'csv') {
+                const csv = XLSX.utils.sheet_to_csv(ws, { FS: state.settings.csvDelimiter || ',' });
+                return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            }
+
+            if (target === 'tsv') {
+                const tsv = XLSX.utils.sheet_to_csv(ws, { FS: '\t' });
+                return new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8' });
+            }
+
+            if (target === 'html') {
+                const tableHtml = XLSX.utils.sheet_to_html(ws);
+                return new Blob([tableHtml], { type: 'text/html;charset=utf-8' });
+            }
+
+            if (target === 'pdf') {
+                const plainTable = XLSX.utils.sheet_to_csv(ws, { FS: '  |  ' });
+                return await renderTextToPdfBlob(plainTable, getBaseName(item.name));
+            }
+
+            throw new Error(`Unsupported target format: ${target}`);
+        }
+
+        // ---------- 7C. IMAGE ENGINE ----------
+        function loadImageElement(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Failed to decode image'));
+                };
+                img.src = url;
+            });
+        }
+
+        function canvasToBlobAsync(canvas, mime, quality) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error(`Failed to encode ${mime}`));
+                }, mime, quality);
+            });
+        }
+
+        function encodeCanvasToBmpBlob(canvas) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.getImageData(0, 0, w, h).data;
+
+            const rowStride = Math.floor((24 * w + 31) / 32) * 4;
+            const pixelArraySize = rowStride * h;
+            const fileSize = 54 + pixelArraySize;
+            const buffer = new ArrayBuffer(fileSize);
+            const view = new DataView(buffer);
+
+            view.setUint8(0, 0x42);
+            view.setUint8(1, 0x4D);
+            view.setUint32(2, fileSize, true);
+            view.setUint32(10, 54, true);
+
+            view.setUint32(14, 40, true);
+            view.setInt32(18, w, true);
+            view.setInt32(22, h, true);
+            view.setUint16(26, 1, true);
+            view.setUint16(28, 24, true);
+            view.setUint32(34, pixelArraySize, true);
+
+            const bytes = new Uint8Array(buffer);
+            for (let y = 0; y < h; y++) {
+                const srcRow = (h - 1 - y) * w * 4;
+                const dstRow = 54 + y * rowStride;
+                for (let x = 0; x < w; x++) {
+                    const s = srcRow + x * 4;
+                    const d = dstRow + x * 3;
+                    bytes[d] = imgData[s + 2];
+                    bytes[d + 1] = imgData[s + 1];
+                    bytes[d + 2] = imgData[s];
+                }
+            }
+
+            return new Blob([buffer], { type: 'image/bmp' });
+        }
+
+        async function encodeImageToIcoBlob(img) {
+            const sizes = [16, 32, 48, 64];
+            const pngBuffers = [];
+
+            for (const sz of sizes) {
+                const c = document.createElement('canvas');
+                c.width = sz;
+                c.height = sz;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(img, 0, 0, sz, sz);
+                const pngBlob = await canvasToBlobAsync(c, 'image/png', 1);
+                pngBuffers.push(new Uint8Array(await pngBlob.arrayBuffer()));
+            }
+
+            const headerSize = 6 + sizes.length * 16;
+            const totalSize = headerSize + pngBuffers.reduce((acc, b) => acc + b.byteLength, 0);
+            const buffer = new ArrayBuffer(totalSize);
+            const view = new DataView(buffer);
+            const out = new Uint8Array(buffer);
+
+            view.setUint16(0, 0, true);
+            view.setUint16(2, 1, true);
+            view.setUint16(4, sizes.length, true);
+
+            let offset = headerSize;
+            sizes.forEach((sz, idx) => {
+                const entryOffset = 6 + idx * 16;
+                const png = pngBuffers[idx];
+                view.setUint8(entryOffset, sz === 256 ? 0 : sz);
+                view.setUint8(entryOffset + 1, sz === 256 ? 0 : sz);
+                view.setUint8(entryOffset + 2, 0);
+                view.setUint8(entryOffset + 3, 0);
+                view.setUint16(entryOffset + 4, 1, true);
+                view.setUint16(entryOffset + 6, 32, true);
+                view.setUint32(entryOffset + 8, png.byteLength, true);
+                view.setUint32(entryOffset + 12, offset, true);
+
+                out.set(png, offset);
+                offset += png.byteLength;
+            });
+
+            return new Blob([buffer], { type: 'image/x-icon' });
+        }
+
+        async function convertImageFile(item) {
+            const img = await loadImageElement(item.file);
+            const target = item.targetFormat;
+
+            if (target === 'ico') {
+                return await encodeImageToIcoBlob(img);
+            }
+
+            let width = Math.max(1, Math.round((img.naturalWidth || img.width || 512) * state.settings.imgScale));
+            let height = Math.max(1, Math.round((img.naturalHeight || img.height || 512) * state.settings.imgScale));
+
+            if (state.settings.imgMaxWidth > 0 && width > state.settings.imgMaxWidth) {
+                const ratio = state.settings.imgMaxWidth / width;
+                width = state.settings.imgMaxWidth;
+                height = Math.max(1, Math.round(height * ratio));
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            if (target === 'jpg' || target === 'bmp') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+
+            if (target === 'png') {
+                return await canvasToBlobAsync(canvas, 'image/png', 1);
+            }
+            if (target === 'jpg') {
+                return await canvasToBlobAsync(canvas, 'image/jpeg', state.settings.imgQuality);
+            }
+            if (target === 'webp') {
+                return await canvasToBlobAsync(canvas, 'image/webp', state.settings.imgQuality);
+            }
+            if (target === 'bmp') {
+                return encodeCanvasToBmpBlob(canvas);
+            }
+            if (target === 'pdf') {
+                if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF library unavailable');
+                const { jsPDF } = window.jspdf;
+                const orientation = width > height ? 'landscape' : 'portrait';
+                const doc = new jsPDF({
+                    orientation,
+                    unit: 'mm',
+                    format: state.settings.pdfPageSize || 'a4'
+                });
+                const pageW = doc.internal.pageSize.getWidth();
+                const pageH = doc.internal.pageSize.getHeight();
+                const margin = 10;
+                const availW = pageW - margin * 2;
+                const availH = pageH - margin * 2;
+                const scale = Math.min(availW / width, availH / height);
+                const drawW = width * scale;
+                const drawH = height * scale;
+                const x = (pageW - drawW) / 2;
+                const y = (pageH - drawH) / 2;
+                const dataUrl = canvas.toDataURL('image/jpeg', state.settings.imgQuality);
+                doc.addImage(dataUrl, 'JPEG', x, y, drawW, drawH);
+                return doc.output('blob');
+            }
+
+            throw new Error(`Unsupported image target: ${target}`);
+        }
+
+        // ---------- 7D. AUDIO ENGINE ----------
+        async function decodeAndResampleAudio(file) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) throw new Error('Web Audio API unavailable');
+
+            const arrayBuffer = await file.arrayBuffer();
+            const tempCtx = new AudioCtx();
+            let decoded;
+            try {
+                decoded = await tempCtx.decodeAudioData(arrayBuffer);
+            } finally {
+                if (tempCtx.close) await tempCtx.close();
+            }
+
+            const targetRate = Number(state.settings.audioRate) || 44100;
+            const targetChannels = Number(state.settings.audioChannels) || 2;
+            const frameCount = Math.max(1, Math.ceil(decoded.duration * targetRate));
+
+            const offlineCtx = new OfflineAudioContext(targetChannels, frameCount, targetRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = decoded;
+            source.connect(offlineCtx.destination);
+            source.start(0);
+
+            return await offlineCtx.startRendering();
+        }
+
+        function encodeAudioBufferToWav(audioBuffer) {
+            const numChannels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+            const numFrames = audioBuffer.length;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = numFrames * blockAlign;
+
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            const writeStr = (offset, str) => {
+                for (let i = 0; i < str.length; i++) {
+                    view.setUint8(offset + i, str.charCodeAt(i));
+                }
+            };
+
+            writeStr(0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeStr(8, 'WAVE');
+            writeStr(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 16, true);
+            writeStr(36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            const channels = [];
+            for (let c = 0; c < numChannels; c++) {
+                channels.push(audioBuffer.getChannelData(c));
+            }
+
+            let offset = 44;
+            for (let i = 0; i < numFrames; i++) {
+                for (let c = 0; c < numChannels; c++) {
+                    const s = Math.max(-1, Math.min(1, channels[c][i]));
+                    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function encodeAudioBufferToMp3(audioBuffer) {
+            if (!window.lamejs || !window.lamejs.Mp3Encoder) {
+                throw new Error('MP3 encoder (lamejs) unavailable');
+            }
+            const channels = audioBuffer.numberOfChannels;
+            const sampleRate = audioBuffer.sampleRate;
+            const kbps = Number(state.settings.audioBitrate) || 192;
+
+            const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
+            const mp3Data = [];
+            const blockSize = 1152;
+
+            const floatToInt16 = (floatArr) => {
+                const out = new Int16Array(floatArr.length);
+                for (let i = 0; i < floatArr.length; i++) {
+                    const s = Math.max(-1, Math.min(1, floatArr[i]));
+                    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+                return out;
+            };
+
+            const left = floatToInt16(audioBuffer.getChannelData(0));
+            const right = channels > 1 ? floatToInt16(audioBuffer.getChannelData(1)) : left;
+
+            for (let i = 0; i < left.length; i += blockSize) {
+                const leftChunk = left.subarray(i, i + blockSize);
+                const mp3buf = channels > 1
+                    ? mp3Encoder.encodeBuffer(leftChunk, right.subarray(i, i + blockSize))
+                    : mp3Encoder.encodeBuffer(leftChunk);
+                if (mp3buf.length > 0) {
+                    mp3Data.push(mp3buf);
+                }
+            }
+
+            const flushBuf = mp3Encoder.flush();
+            if (flushBuf.length > 0) {
+                mp3Data.push(flushBuf);
+            }
+
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        }
+
+        function encodeAudioBufferToSpectrumJson(audioBuffer, filename) {
+            const data = audioBuffer.getChannelData(0);
+            const bins = 128;
+            const step = Math.max(1, Math.floor(data.length / bins));
+            const peaks = [];
+
+            for (let b = 0; b < bins; b++) {
+                let maxAmp = 0;
+                const start = b * step;
+                const end = Math.min(data.length, start + step);
+                for (let i = start; i < end; i++) {
+                    const abs = Math.abs(data[i]);
+                    if (abs > maxAmp) maxAmp = abs;
+                }
+                peaks.push(Number(maxAmp.toFixed(4)));
+            }
+
+            const payload = {
+                file: filename,
+                sampleRate: audioBuffer.sampleRate,
+                channels: audioBuffer.numberOfChannels,
+                durationSeconds: Number(audioBuffer.duration.toFixed(3)),
+                waveformPeaks: peaks
+            };
+
+            const space = state.settings.jsonFormat === 'minified' ? 0 : 2;
+            return new Blob([JSON.stringify(payload, null, space)], { type: 'application/json;charset=utf-8' });
+        }
+
+        async function convertAudioFile(item) {
+            const buffer = await decodeAndResampleAudio(item.file);
+            const target = item.targetFormat;
+
+            if (target === 'wav') {
+                return encodeAudioBufferToWav(buffer);
+            }
+            if (target === 'mp3') {
+                return encodeAudioBufferToMp3(buffer);
+            }
+            if (target === 'json') {
+                return encodeAudioBufferToSpectrumJson(buffer, item.name);
+            }
+
+            throw new Error(`Unsupported audio target: ${target}`);
+        }
+
+        // ==========================================
+        // 8. EVENT LISTENERS & INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(state.theme);
+            applyLanguage(state.lang);
+
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+
+            // Theme & Language Switchers
+            document.getElementById('themeDarkBtn')?.addEventListener('click', () => applyTheme('dark'));
+            document.getElementById('themeLightBtn')?.addEventListener('click', () => applyTheme('light'));
+            document.getElementById('langRuBtn')?.addEventListener('click', () => applyLanguage('ru'));
+            document.getElementById('langEnBtn')?.addEventListener('click', () => applyLanguage('en'));
+
+            // Category Filter Tabs
+            document.getElementById('categoryTabs')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.cat-tab');
+                if (!btn) return;
+                state.activeCategory = btn.getAttribute('data-cat') || 'all';
+                renderCategoryTabs();
+                renderQueue();
+            });
+
+            // Supported Formats Modal
+            const formatsModal = document.getElementById('formatsModal');
+            document.getElementById('openFormatsModalBtn')?.addEventListener('click', () => {
+                if (formatsModal) {
+                    formatsModal.classList.remove('hidden');
+                    formatsModal.classList.add('flex');
+                }
+            });
+            document.getElementById('closeFormatsModalBtn')?.addEventListener('click', () => {
+                if (formatsModal) {
+                    formatsModal.classList.add('hidden');
+                    formatsModal.classList.remove('flex');
+                }
+            });
+            formatsModal?.addEventListener('click', (e) => {
+                if (e.target === formatsModal) {
+                    formatsModal.classList.add('hidden');
+                    formatsModal.classList.remove('flex');
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && formatsModal && !formatsModal.classList.contains('hidden')) {
+                    formatsModal.classList.add('hidden');
+                    formatsModal.classList.remove('flex');
+                }
+            });
+
+            // Dropzone & File Input
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const selectFilesBtn = document.getElementById('selectFilesBtn');
+
+            // 3D Tilt & Luminous Glare on Cursor Hover
+            if (dropzone) {
+                let tiltRaf = null;
+                const maxTiltDeg = 6.5;
+
+                dropzone.addEventListener('mouseenter', () => {
+                    dropzone.classList.add('is-tilting');
+                });
+
+                dropzone.addEventListener('mousemove', (e) => {
+                    if (tiltRaf) cancelAnimationFrame(tiltRaf);
+                    tiltRaf = requestAnimationFrame(() => {
+                        const rect = dropzone.getBoundingClientRect();
+                        const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                        const relY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                        const rotateY = (relX - 0.5) * 2 * maxTiltDeg;
+                        const rotateX = (0.5 - relY) * 2 * maxTiltDeg;
+
+                        dropzone.style.setProperty('--glare-x', `${(relX * 100).toFixed(1)}%`);
+                        dropzone.style.setProperty('--glare-y', `${(relY * 100).toFixed(1)}%`);
+                        dropzone.style.transform = `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-4px) scale3d(1.008, 1.008, 1.008)`;
+                    });
+                });
+
+                dropzone.addEventListener('mouseleave', () => {
+                    if (tiltRaf) cancelAnimationFrame(tiltRaf);
+                    dropzone.classList.remove('is-tilting');
+                    dropzone.style.transform = 'rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)';
+                });
+
+                dropzone.addEventListener('click', () => {
+                    fileInput?.click();
+                });
+
+                ['dragenter', 'dragover'].forEach((evtName) => {
+                    dropzone.addEventListener(evtName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.add('drop-active');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach((evtName) => {
+                    dropzone.addEventListener(evtName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('drop-active');
+                    });
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    if (e.dataTransfer && e.dataTransfer.files) {
+                        addFilesToQueue(e.dataTransfer.files);
+                    }
+                });
+            }
+
+            selectFilesBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput?.click();
+            });
+
+            fileInput?.addEventListener('change', (e) => {
+                if (e.target && e.target.files) {
+                    addFilesToQueue(e.target.files);
+                    fileInput.value = '';
+                }
+            });
+
+            // Batch Controls
+            document.getElementById('globalTargetSelect')?.addEventListener('change', (e) => {
+                const chosenFmt = e.target.value;
+                if (!chosenFmt) return;
+
+                let updatedCount = 0;
+                const scopeFiles = state.activeCategory === 'all'
+                    ? state.files
+                    : state.files.filter((f) => f.category === state.activeCategory);
+
+                scopeFiles.forEach((item) => {
+                    const allowed = getTargetOptionsForItem(item);
+                    if (allowed.includes(chosenFmt)) {
+                        item.targetFormat = chosenFmt;
+                        item.status = 'ready';
+                        item.outputBlob = null;
+                        updatedCount++;
+                    }
+                });
+
+                if (updatedCount > 0) {
+                    showToast(t('toastBatchTarget', { fmt: chosenFmt.toUpperCase(), count: updatedCount }), 'info');
+                    renderQueue();
+                }
+            });
+
+            document.getElementById('convertAllBtn')?.addEventListener('click', () => {
+                convertAllItems();
+            });
+
+            document.getElementById('downloadZipBtn')?.addEventListener('click', () => {
+                downloadAllAsZip();
+            });
+
+            document.getElementById('clearAllBtn')?.addEventListener('click', () => {
+                state.files = [];
+                renderCategoryTabs();
+                renderQueue();
+                showToast(t('toastCleared'), 'info');
+            });
+
+            // File Queue Delegation (Target Select, Convert, Download, Remove)
+            const fileListEl = document.getElementById('fileList');
+            fileListEl?.addEventListener('change', (e) => {
+                const targetSelect = e.target.closest('select[data-action="target"]');
+                if (!targetSelect) return;
+                const id = targetSelect.getAttribute('data-id');
+                const item = state.files.find((f) => f.id === id);
+                if (item) {
+                    item.targetFormat = targetSelect.value;
+                    item.status = 'ready';
+                    item.outputBlob = null;
+                    renderQueue();
+                }
+            });
+
+            fileListEl?.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+                const action = btn.getAttribute('data-action');
+                const id = btn.getAttribute('data-id');
+                const item = state.files.find((f) => f.id === id);
+                if (!item) return;
+
+                if (action === 'convert') {
+                    convertSingleItem(id);
+                } else if (action === 'download' && item.outputBlob) {
+                    triggerDownload(item.outputBlob, item.outputName || `${getBaseName(item.name)}.${item.targetFormat}`);
+                } else if (action === 'remove') {
+                    state.files = state.files.filter((f) => f.id !== id);
+                    renderCategoryTabs();
+                    renderQueue();
+                }
+            });
+
+            // Contextual Settings Inputs
+            const markRelevantFilesReady = () => {
+                let changed = false;
+                state.files.forEach((f) => {
+                    if (f.status === 'done') {
+                        f.status = 'ready';
+                        f.outputBlob = null;
+                        changed = true;
+                    }
+                });
+                if (changed) renderQueue();
+            };
+
+            document.getElementById('settingPdfPageSize')?.addEventListener('change', (e) => {
+                state.settings.pdfPageSize = e.target.value;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingDocFontSize')?.addEventListener('change', (e) => {
+                state.settings.docFontSize = Number(e.target.value) || 11;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingDocLineSpacing')?.addEventListener('change', (e) => {
+                state.settings.docLineSpacing = Number(e.target.value) || 1.5;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingCsvDelimiter')?.addEventListener('change', (e) => {
+                state.settings.csvDelimiter = e.target.value;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingJsonFormat')?.addEventListener('change', (e) => {
+                state.settings.jsonFormat = e.target.value;
+                markRelevantFilesReady();
+            });
+
+            const imgQualityInput = document.getElementById('settingImgQuality');
+            const imgQualityVal = document.getElementById('settingImgQualityVal');
+            imgQualityInput?.addEventListener('input', (e) => {
+                const val = Number(e.target.value) || 0.88;
+                state.settings.imgQuality = val;
+                if (imgQualityVal) imgQualityVal.textContent = `${Math.round(val * 100)}%`;
+            });
+            imgQualityInput?.addEventListener('change', () => {
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingImgScale')?.addEventListener('change', (e) => {
+                state.settings.imgScale = Number(e.target.value) || 1;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingImgMaxWidth')?.addEventListener('change', (e) => {
+                state.settings.imgMaxWidth = Number(e.target.value) || 0;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingAudioRate')?.addEventListener('change', (e) => {
+                state.settings.audioRate = Number(e.target.value) || 44100;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingAudioBitrate')?.addEventListener('change', (e) => {
+                state.settings.audioBitrate = Number(e.target.value) || 192;
+                markRelevantFilesReady();
+            });
+
+            document.getElementById('settingAudioChannels')?.addEventListener('change', (e) => {
+                state.settings.audioChannels = Number(e.target.value) || 2;
+                markRelevantFilesReady();
+            });
+        });
+    </script>
+</body>
+</html>
